@@ -1,19 +1,19 @@
 """
-Model Initialization File
+模型初始化文件
 
-Configures the LLM model used throughout the workshop notebook.
+配置整个工作坊 notebook 使用的 LLM 模型。
 
-Default: Anthropic (claude-haiku-4-5).
+默认：Anthropic（claude-haiku-4-5）。
 
-To swap providers:
-  1. Comment out the Default Models section below.
-  2. Uncomment the section for your desired provider.
-  3. Follow the setup notes inline.
+切换供应商：
+  1. 注释掉下面的默认模型部分。
+  2. 取消注释你想使用的供应商部分。
+  3. 按照内联配置说明完成设置。
 
-Provider sections included (commented out by default):
-  - Azure OpenAI  (needs AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT)
-  - AWS Bedrock   (needs AWS credentials + AWS_MODEL_ARN)
-  - Google Vertex (needs GOOGLE_APPLICATION_CREDENTIALS)
+已包含的供应商配置（默认注释）：
+  - Azure OpenAI  （需要 AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT）
+  - AWS Bedrock   （需要 AWS 凭据 + AWS_MODEL_ARN）
+  - Google Vertex （需要 GOOGLE_APPLICATION_CREDENTIALS）
 """
 
 from dotenv import load_dotenv
@@ -21,11 +21,12 @@ load_dotenv(override=True)
 from langchain.chat_models import init_chat_model
 
 
-# ---- Default Models -------------------------------------------------------
+# ---- 默认模型 -------------------------------------------------------------
 # model = init_chat_model("openai:gpt-4.1-mini")
+model = init_chat_model("deepseek:deepseek-v4-flash")
 
-# Use Anthropic by default
-model = init_chat_model("anthropic:claude-haiku-4-5")
+# 默认使用 Anthropic
+# model = init_chat_model("anthropic:claude-haiku-4-5")
 
 
 # ---- Azure OpenAI ---------------------------------------------------------
@@ -38,15 +39,15 @@ model = init_chat_model("anthropic:claude-haiku-4-5")
 #     token = credential.get_token("https://cognitiveservices.azure.com/.default")
 #     return token.token
 
-# Make sure AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT are set.
+# 确保已设置 AZURE_OPENAI_API_KEY 和 AZURE_OPENAI_ENDPOINT。
 
-# Azure OpenAI: Using environment variables
+# Azure OpenAI：使用环境变量
 # model = AzureChatOpenAI(
 #     azure_deployment="gpt-4o",
 #     streaming=True,
 # )
 
-# Azure OpenAI: Using Azure AD
+# Azure OpenAI：使用 Azure AD
 # model = AzureChatOpenAI(
 #     api_version="2024-03-01-preview",
 #     azure_endpoint="https://deployment.openai.azure.com/",
@@ -74,18 +75,18 @@ model = init_chat_model("anthropic:claude-haiku-4-5")
 
 
 # ---- Google Vertex AI -----------------------------------------------------
-# Make sure your Vertex AI credentials are set up and GOOGLE_APPLICATION_CREDENTIALS
-# points to the JSON file.
+# 确保已配置 Vertex AI 凭据，并让 GOOGLE_APPLICATION_CREDENTIALS
+# 指向对应的 JSON 文件。
 
 # import os
 # from pathlib import Path
 # from langchain.chat_models import init_chat_model
 
-# # Resolve project root and load .env (utils/ -> project root is one level up)
+# # 解析项目根目录并加载 .env（utils/ -> 项目根目录向上一级）
 # project_root = Path(__file__).resolve().parent.parent
 # load_dotenv(dotenv_path=project_root / ".env", override=True)
 
-# # Make the credentials path absolute if it was given as a relative path
+# # 如果凭据路径是相对路径，则转换为绝对路径
 # if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
 #     cred_path = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
 #     if not os.path.isabs(cred_path):

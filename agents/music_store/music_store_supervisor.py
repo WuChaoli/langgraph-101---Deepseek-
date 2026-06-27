@@ -19,30 +19,28 @@ class State(InputState):
 
 
 
-supervisor_prompt = """You are an expert customer support assistant for a digital music store. You can handle music catalog or invoice related question regarding past purchases, song or album availabilities. 
-You are dedicated to providing exceptional service and ensuring customer queries are answered thoroughly, and have a team of subagents that you can use to help answer queries from customers. 
-Your primary role is to serve as a supervisor/planner for this multi-agent team that helps answer queries from customers. Always respond to the customer through summarizing the conversation, including individual responses from subagents. 
-If a question is unrelated to music or invoice, politely remind the customer regarding your scope of work. Do not answer unrelated answers. 
+supervisor_prompt = """你是一位数字音乐商店的专家级客服助手，可以处理与音乐目录或发票相关的问题，包括历史购买、歌曲或专辑是否可用等。
+你致力于提供出色服务，确保客户问题得到充分回答；你还有一个子 Agent 团队，可以用来协助回答客户问题。
+你的主要角色是这个多 Agent 团队的主管/规划者，负责帮助回答客户查询。回复客户时，请始终总结对话，并包含各个子 Agent 的独立回复。
+如果问题与音乐或发票无关，请礼貌提醒客户你的工作范围，不要回答无关问题。
 
-Your team is composed of two subagents that you can use to help answer the customer's request:
-1. music_catalog_information_subagent: this subagent has access to user's saved music preferences. It can also retrieve information about the digital music store's music 
-catalog (albums, tracks, songs, etc.) from the database. This subagent has access to the user's memory profile, and music preferences! It will automatically be able to infer user's music preferences from the memory profile. 
-no need to pass customer identifier to this subagent.
-2. invoice_information_subagent: this subagent is able to retrieve information about a customer's past purchases or invoices 
-from the database. 
+你的团队由两个子 Agent 组成，可以用来协助回答客户请求：
+1. music_catalog_information_subagent：该子 Agent 可以访问用户保存过的音乐偏好，也可以从数据库检索数字音乐商店的音乐目录信息（专辑、曲目、歌曲等）。它可以访问用户记忆档案和音乐偏好，并能自动从记忆档案中推断用户偏好。
+不需要向该子 Agent 传递客户标识。
+2. invoice_information_subagent：该子 Agent 可以从数据库检索客户过去的购买或发票信息。
 
-Based on the existing steps that have been taken in the messages, your role is to call the appropriate subagent based on the users query."""
+根据消息中已经完成的步骤，你的职责是基于用户查询调用合适的子 Agent。"""
 
 
 @tool(
     name_or_callable="invoice_information_subagent",
     description="""
-        An agent that can assistant with all invoice-related queries. It can retrieve information about a customers past purchases or invoices.
+        一个可以协助处理所有发票相关查询的 Agent。它可以检索客户过去的购买或发票信息。
         """
 )
 def call_invoice_information_subagent(runtime: ToolRuntime, query: str):
-    print('made it here')
-    print(f"invoice subagent input: {query}")
+    print('已进入发票子 Agent')
+    print(f"发票子 Agent 输入：{query}")
     result = invoice_agent.invoke({
         "messages": [HumanMessage(content=query)],
         "customer_id": runtime.state.get("customer_id", {})
@@ -53,8 +51,7 @@ def call_invoice_information_subagent(runtime: ToolRuntime, query: str):
 @tool(
     name_or_callable="music_catalog_subagent",
     description="""
-        An agent that can assistant with all music-related queries. This agent has access to user's saved music preferences. It can also retrieve information about the digital music store's music 
-        catalog (albums, tracks, songs, etc.) from the database. 
+        一个可以协助处理所有音乐相关查询的 Agent。它可以访问用户保存过的音乐偏好，也可以从数据库检索数字音乐商店的音乐目录信息（专辑、曲目、歌曲等）。
         """
 )
 def call_music_catalog_subagent(runtime: ToolRuntime, query: str):

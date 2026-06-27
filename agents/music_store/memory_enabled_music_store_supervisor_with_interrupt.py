@@ -27,26 +27,26 @@ class State(InputState):
 from pydantic import BaseModel, Field
 
 class UserInput(BaseModel):
-    """Schema for parsing user-provided account information."""
-    identifier: str = Field(description = "Identifier, which can be a customer ID, email, or phone number.")
+    """用于解析用户提供的账户信息的 schema。"""
+    identifier: str = Field(description = "标识符，可以是客户 ID、邮箱或电话号码。")
 
 
 structured_llm = model.with_structured_output(schema=UserInput)
-structured_system_prompt = """You are a customer service representative responsible for extracting customer identifier.\n 
-Only extract the customer's account information from the message history. 
-If they haven't provided the information yet, return an empty string for the file"""
+structured_system_prompt = """你是一位客服代表，负责提取客户标识符。\n
+只从消息历史中提取客户账户信息。
+如果客户尚未提供该信息，请为该字段返回空字符串。"""
 
 
-# Helper 
+# 辅助函数
 def get_customer_id_from_identifier(identifier: str) -> Optional[int]:
     """
-    Retrieve Customer ID using an identifier, which can be a customer ID, email, or phone number.
+    使用标识符查询客户 ID。标识符可以是客户 ID、邮箱或电话号码。
     
-    Args:
-        identifier (str): The identifier can be customer ID, email, or phone.
+    参数：
+        identifier (str): 可以是客户 ID、邮箱或电话号码。
     
-    Returns:
-        Optional[int]: The CustomerId if found, otherwise None.
+    返回：
+        Optional[int]: 如果找到则返回 CustomerId，否则返回 None。
     """
     if identifier.isdigit():
         return int(identifier)
@@ -64,35 +64,34 @@ def get_customer_id_from_identifier(identifier: str) -> Optional[int]:
             return formatted_result[0][0]
     return None 
 
-# Node
+# 节点
 
 def verify_info(state: State):
-    """Verify the customer's account by parsing their input and matching it with the database."""
+    """解析客户输入并与数据库匹配，以验证客户账户。"""
 
     if state.get("customer_id") is None: 
-        system_instructions = """You are a music store agent, where you are trying to verify the customer identity 
-        as the first step of the customer support process. 
-        Only after their account is verified, you would be able to support them on resolving the issue. 
-        In order to verify their identity, one of their customer ID, email, or phone number needs to be provided.
-        If the customer has not provided their identifier, please ask them for it.
-        If they have provided the identifier but cannot be found, please ask them to revise it."""
+        system_instructions = """你是音乐商店 Agent，当前正在将验证客户身份作为客服流程的第一步。
+        只有客户账户通过验证后，你才能协助他们解决问题。
+        为了验证身份，客户需要提供客户 ID、邮箱或电话号码之一。
+        如果客户尚未提供标识符，请向他们索要。
+        如果客户已提供标识符但无法找到，请让他们修改后重新提供。"""
 
         user_input = state["messages"][-1] 
     
-        # Parse for customer ID
+        # 解析客户 ID
         parsed_info = structured_llm.invoke([SystemMessage(content=structured_system_prompt)] + [user_input])
     
-        # Extract details
+        # 提取详情
         identifier = parsed_info.identifier
     
         customer_id = ""
-        # Attempt to find the customer ID
+        # 尝试查找客户 ID
         if (identifier):
             customer_id = get_customer_id_from_identifier(identifier)
     
         if customer_id != "":
             intent_message = AIMessage(
-                content= f"Thank you for providing your information! I was able to verify your account with customer id {customer_id}."
+                content= f"感谢你提供信息！我已经成功验证你的账户，客户 ID 为 {customer_id}。"
             )
             return {
                   "customer_id": customer_id,
@@ -106,41 +105,41 @@ def verify_info(state: State):
         pass
 
 from langgraph.types import interrupt
-# Node
+# 节点
 def human_input(state: State):
-    """ No-op node that should be interrupted on """
-    user_input = interrupt("Please provide input.")
+    """应在此处被 interrupt 的空操作节点。"""
+    user_input = interrupt("请提供输入。")
     return {"messages": [HumanMessage(content=user_input)]}
 
 
-# conditional_edge
+# 条件边
 def should_interrupt(state: State):
     if state.get("customer_id") is not None:
         return "continue"
     else:
         return "interrupt"
 
-# helper function to structure memory 
+# 用于整理记忆的辅助函数
 def format_user_memory(user_data):
-    """Formats music preferences from users, if available."""
+    """如果可用，则格式化用户音乐偏好。"""
     profile = user_data['memory']
     result = ""
     
-    # Handle both Pydantic model (attributes) and dict (keys) representations
+    # 同时处理 Pydantic 模型（属性）和 dict（键）两种表示
     if isinstance(profile, dict):
         music_prefs = profile.get('music_preferences', [])
     else:
         music_prefs = getattr(profile, 'music_preferences', [])
     
     if music_prefs:
-        result += f"Music Preferences: {', '.join(music_prefs)}"
+        result += f"音乐偏好：{', '.join(music_prefs)}"
     return result.strip()
 
-# Node
+# 节点
 def load_memory(state: State, store: BaseStore):
-    """Loads music preferences from users, if available."""
+    """如果可用，则加载用户音乐偏好。"""
     
-    user_id = str(state["customer_id"])  # Convert to string to match create_memory
+    user_id = str(state["customer_id"])  # 转为字符串，以匹配 create_memory
     namespace = ("memory_profile", user_id)
     existing_memory = store.get(namespace, "user_memory")
     formatted_memory = ""
@@ -149,62 +148,62 @@ def load_memory(state: State, store: BaseStore):
 
     return {"loaded_memory" : formatted_memory}
 
-# User profile structure for creating memory
+# 用于创建记忆的用户档案结构
 
 class UserProfile(BaseModel):
     customer_id: str = Field(
-        description="The customer ID of the customer"
+        description="客户的客户 ID"
     )
     music_preferences: List[str] = Field(
-        description="The music preferences of the customer"
+        description="客户的音乐偏好"
     )
 
-create_memory_prompt = """You are an expert analyst that is observing a conversation that has taken place between a customer and a customer support assistant. The customer support assistant works for a digital music store, and has utilized a multi-agent team to answer the customer's request. 
-You are tasked with analyzing the conversation that has taken place between the customer and the customer support assistant, and updating the memory profile associated with the customer. 
-You specifically care about saving any music interest the customer has shared about themselves, particularly their music preferences to their memory profile.
+create_memory_prompt = """你是一位专家分析师，正在观察客户与客服助手之间发生的一段对话。该客服助手服务于一家数字音乐商店，并使用多 Agent 团队回答客户请求。
+你的任务是分析客户与客服助手之间的对话，并更新与该客户关联的记忆档案。
+你尤其关注保存客户在对话中透露的任何音乐兴趣，特别是他们的音乐偏好，并写入记忆档案。
 
 <core_instructions>
-1. The memory profile may be empty. If it's empty, you should ALWAYS create a new memory profile for the customer.
-2. You should identify any music interest the customer during the conversation and add it to the memory profile **IF** it is not already present.
-3. For each key in the memory profile, if there is no new information, do NOT update the value - keep the existing value unchanged.
-4. ONLY update the values in the memory profile if there is new information.
+1. 记忆档案可能为空。如果为空，你应始终为客户创建新的记忆档案。
+2. 你应识别客户在对话中表达的任何音乐兴趣，并在尚未存在时添加到记忆档案中。
+3. 对记忆档案中的每个键，如果没有新信息，不要更新该值，保持原值不变。
+4. 只有存在新信息时，才更新记忆档案中的值。
 </core_instructions>
 
 <expected_format>
-The customer's memory profile should have the following fields:
-- customer_id: the customer ID of the customer
-- music_preferences: the music preferences of the customer
+客户的记忆档案应包含以下字段：
+- customer_id：客户的客户 ID
+- music_preferences：客户的音乐偏好
 
-IMPORTANT: ENSURE your response is an object with these fields.
+重要：确保你的回复是一个包含这些字段的对象。
 </expected_format>
 
 
 <important_context>
-**IMPORTANT CONTEXT BELOW**
-To help you with this task, I have attached the conversation that has taken place between the customer and the customer support assistant below, as well as the existing memory profile associated with the customer that you should either update or create. 
+**重要上下文如下**
+为帮助你完成任务，下面附上客户与客服助手之间的对话，以及与该客户关联的现有记忆档案。你应基于这些信息更新或创建记忆档案。
 
-The conversation between the customer and the customer support assistant that you should analyze is as follows:
+你需要分析的客户与客服助手对话如下：
 {conversation}
 
-The existing memory profile associated with the customer that you should either update or create based on the conversation is as follows:
+你需要基于对话更新或创建的现有客户记忆档案如下：
 {memory_profile}
 
 </important_context>
 
-Reminder: Take a deep breath and think carefully before responding.
+提醒：深呼吸，仔细思考后再回复。
 """
 
-# Node
+# 节点
 def create_memory(state: State, store: BaseStore):
     user_id = str(state["customer_id"])
     namespace = ("memory_profile", user_id)
     formatted_memory = state["loaded_memory"]
     formatted_system_message = SystemMessage(content=create_memory_prompt.format(conversation=state["messages"], memory_profile=formatted_memory))
-    # Anthropic requires at least one user message along with the system message
-    user_prompt = HumanMessage(content="Please analyze the conversation and update the customer's memory profile according to the instructions.")
+    # Anthropic 要求除了 system message 之外至少有一条 user message
+    user_prompt = HumanMessage(content="请根据指令分析这段对话，并更新客户的记忆档案。")
     updated_memory = model.with_structured_output(UserProfile).invoke([formatted_system_message, user_prompt])
     key = "user_memory"
-    # Convert Pydantic model to dict to avoid pickle serialization issues on restart
+    # 将 Pydantic 模型转为 dict，避免重启时出现 pickle 序列化问题
     store.put(namespace, key, {"memory": updated_memory.model_dump()})
 
 

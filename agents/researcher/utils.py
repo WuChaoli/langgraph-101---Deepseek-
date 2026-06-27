@@ -1,4 +1,4 @@
-"""Simplified utility functions for the Deep Research agent."""
+"""Deep Research Agent 的简化工具函数。"""
 
 import logging
 from datetime import datetime
@@ -12,54 +12,54 @@ from langchain_core.tools import tool
 from agents.researcher.models import ResearchComplete
 
 ##########################
-# Reflection Tool Utils
+# 反思工具相关函数
 ##########################
 
-@tool(description="Strategic reflection tool for research planning")
+@tool(description="用于研究规划的战略反思工具")
 def think_tool(reflection: str) -> str:
-    """Tool for strategic reflection on research progress.
+    """用于对研究进展进行战略反思的工具。
 
-    Use this tool after each search to analyze results and plan next steps.
+    每次搜索后使用此工具分析结果并规划下一步。
 
-    Args:
-        reflection: Detailed reflection on research progress and next steps
+    参数：
+        reflection: 对研究进展和下一步计划的详细反思
 
-    Returns:
-        Confirmation that reflection was recorded
+    返回：
+        反思已记录的确认信息
     """
-    return f"Reflection recorded: {reflection}"
+    return f"已记录反思：{reflection}"
 
 
 ##########################
-# Tool Utils
+# 工具相关函数
 ##########################
 
 async def get_all_tools():
-    """Assemble complete toolkit for research operations.
+    """组装研究操作所需的完整工具集。
 
-    Returns tools including OpenAI's native web search.
+    返回包含 OpenAI 原生网页搜索在内的工具。
     """
-    # Core research tools
+    # 核心研究工具
     tools = [tool(ResearchComplete), think_tool]
 
-    # Add OpenAI's native web search
-    # This is a special tool definition that OpenAI models recognize
+    # 添加 OpenAI 原生网页搜索
+    # 这是 OpenAI 模型能够识别的特殊工具定义
     tools.append({"type": "web_search_preview"})
 
     return tools
 
 
 def get_notes_from_tool_calls(messages: list[MessageLikeRepresentation]):
-    """Extract notes from tool call messages."""
+    """从工具调用消息中提取笔记。"""
     return [tool_msg.content for tool_msg in filter_messages(messages, include_types="tool")]
 
 
 ##########################
-# Model Provider Native Websearch Utils
+# 模型供应商原生网页搜索相关函数
 ##########################
 
 def anthropic_websearch_called(response):
-    """Detect if Anthropic's native web search was used."""
+    """检测是否使用了 Anthropic 原生网页搜索。"""
     try:
         usage = response.response_metadata.get("usage")
         if not usage:
@@ -80,7 +80,7 @@ def anthropic_websearch_called(response):
 
 
 def openai_websearch_called(response):
-    """Detect if OpenAI's web search was used."""
+    """检测是否使用了 OpenAI 网页搜索。"""
     try:
         tool_outputs = response.additional_kwargs.get("tool_outputs")
         if not tool_outputs:
@@ -96,18 +96,18 @@ def openai_websearch_called(response):
 
 
 async def execute_tool_safely(tool, args):
-    """Safely execute a tool with error handling."""
+    """安全执行工具并处理错误。"""
     try:
         return await tool.ainvoke(args)
     except Exception as e:
-        return f"Error executing tool: {str(e)}"
+        return f"执行工具时出错：{str(e)}"
 
 
 ##########################
-# Misc Utils
+# 其他工具函数
 ##########################
 
 def get_today_str() -> str:
-    """Get current date formatted for display."""
+    """获取用于展示的当前日期字符串。"""
     now = datetime.now()
     return f"{now:%a} {now:%b} {now.day}, {now:%Y}"

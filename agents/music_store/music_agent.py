@@ -26,7 +26,7 @@ class State(InputState):
 
 @tool
 def get_albums_by_artist(artist: str):
-    """Get albums by an artist."""
+    """按艺术家查询专辑。"""
     return db.run(
         f"""
         SELECT Album.Title, Artist.Name 
@@ -39,7 +39,7 @@ def get_albums_by_artist(artist: str):
 
 @tool
 def get_tracks_by_artist(artist: str):
-    """Get songs by an artist (or similar artists)."""
+    """按艺术家（或相似艺术家）查询歌曲。"""
     return db.run(
         f"""
         SELECT Track.Name as SongName, Artist.Name as ArtistName 
@@ -54,18 +54,18 @@ def get_tracks_by_artist(artist: str):
 @tool
 def get_songs_by_genre(genre: str):
     """
-    Fetch songs from the database that match a specific genre.
+    从数据库中获取匹配指定流派的歌曲。
     
-    Args:
-        genre (str): The genre of the songs to fetch.
+    参数：
+        genre (str): 要查询的歌曲流派。
     
-    Returns:
-        list[dict]: A list of songs that match the specified genre.
+    返回：
+        list[dict]: 匹配指定流派的歌曲列表。
     """
     genre_id_query = f"SELECT GenreId FROM Genre WHERE Name LIKE '%{genre}%'"
     genre_ids = db.run(genre_id_query)
     if not genre_ids:
-        return f"No songs found for the genre: {genre}"
+        return f"未找到流派为 {genre} 的歌曲"
     genre_ids = ast.literal_eval(genre_ids)
     genre_id_list = ", ".join(str(gid[0]) for gid in genre_ids)
 
@@ -80,7 +80,7 @@ def get_songs_by_genre(genre: str):
     """
     songs = db.run(songs_query, include_columns=True)
     if not songs:
-        return f"No songs found for the genre: {genre}"
+        return f"未找到流派为 {genre} 的歌曲"
     formatted_songs = ast.literal_eval(songs)
     return [
         {"Song": song["SongName"], "Artist": song["ArtistName"]}
@@ -89,7 +89,7 @@ def get_songs_by_genre(genre: str):
 
 @tool
 def check_for_songs(song_title):
-    """Check if a song exists by its name."""
+    """按歌曲名检查歌曲是否存在。"""
     return db.run(
         f"""
         SELECT * FROM Track WHERE Name LIKE '%{song_title}%';
@@ -101,89 +101,89 @@ music_tools = [get_albums_by_artist, get_tracks_by_artist, get_songs_by_genre, c
 llm_with_music_tools = model.bind_tools(music_tools)
 
 
-# Node
+# 节点
 music_tool_node = ToolNode(music_tools)
 
-# Node 
+# 节点
 def music_assistant(state: State): 
 
-    # Fetching long term memory. 
+    # 获取长期记忆
     memory = "None" 
     if "loaded_memory" in state: 
         memory = state["loaded_memory"]
 
-    # Intructions for our agent  
+    # Agent 指令
     music_assistant_prompt = f"""
-    You are a member of the assistant team, your role specifically is to focused on helping customers discover and learn about music in our digital catalog. 
-    If you are unable to find playlists, songs, or albums associated with an artist, it is okay. 
-    Just inform the customer that the catalog does not have any playlists, songs, or albums associated with that artist.
-    You also have context on any saved user preferences, helping you to tailor your response. 
+    你是助手团队的一员，专门帮助客户发现和了解数字音乐商店目录中的音乐。
+    如果找不到某位艺术家关联的播放列表、歌曲或专辑，这是可以接受的。
+    只需要告知客户：目录中没有与该艺术家关联的播放列表、歌曲或专辑。
+    你还会获得用户保存过的偏好上下文，请用它来定制回复。
     
-    CORE RESPONSIBILITIES:
-    - Search and provide accurate information about songs, albums, artists, and playlists
-    - Offer relevant recommendations based on customer interests
-    - Handle music-related queries with attention to detail
-    - Help customers discover new music they might enjoy
-    - You are routed only when there are questions related to music catalog; ignore other questions. 
+    核心职责：
+    - 搜索并提供有关歌曲、专辑、艺术家和播放列表的准确信息
+    - 根据客户兴趣提供相关推荐
+    - 细致处理与音乐相关的问题
+    - 帮助客户发现他们可能喜欢的新音乐
+    - 只有与音乐目录相关的问题才会路由给你；请忽略其他问题。
     
-    SEARCH GUIDELINES:
-    1. Always perform thorough searches before concluding something is unavailable
-    2. If exact matches aren't found, try:
-       - Checking for alternative spellings
-       - Looking for similar artist names
-       - Searching by partial matches
-       - Checking different versions/remixes
-    3. When providing song lists:
-       - Include the artist name with each song
-       - Mention the album when relevant
-       - Note if it's part of any playlists
-       - Indicate if there are multiple versions
+    搜索指南：
+    1. 在判断某项内容不可用之前，始终先进行充分搜索
+    2. 如果找不到精确匹配，请尝试：
+       - 检查其他拼写
+       - 查找相似的艺术家名称
+       - 使用部分匹配搜索
+       - 检查不同版本或混音版本
+    3. 提供歌曲列表时：
+       - 每首歌都包含艺术家名称
+       - 相关时提及专辑
+       - 如果属于某个播放列表，请说明
+       - 如果存在多个版本，请指出
     
-    Additional context is provided below: 
+    下面提供额外上下文：
 
-    Prior saved user preferences: {memory}
+    之前保存的用户偏好：{memory}
     
-    Message history is also attached.  
+    消息历史也已附带。
     """
 
-    # Invoke the model
+    # 调用模型
     response = llm_with_music_tools.invoke([SystemMessage(music_assistant_prompt)] + state["messages"])
     
-    # Update the state
+    # 更新状态
     return {"messages": [response]}
 
-# Conditional edge that determines whether to continue or not
+# 条件边：判断是否继续执行
 def should_continue(state: State):
     messages = state["messages"]
     last_message = messages[-1]
     
-    # If there is no function call, then we finish
+    # 如果没有函数调用，则流程结束
     if not last_message.tool_calls:
         return "end"
-    # Otherwise if there is, we continue
+    # 否则继续执行
     else:
         return "continue"
 
 music_workflow = StateGraph(State, input_schema = InputState)
 
-# Add nodes 
+# 添加节点
 music_workflow.add_node("music_assistant", music_assistant)
 music_workflow.add_node("music_tool_node", music_tool_node)
 
 
-# Add edges 
-# First, we define the start node. The query will always route to the subagent node first. 
+# 添加边
+# 首先定义起始节点。用户查询总是先路由到子 Agent 节点。
 music_workflow.add_edge(START, "music_assistant")
 
-# We now add a conditional edge
+# 添加条件边
 music_workflow.add_conditional_edges(
     "music_assistant",
-    # Function representing our conditional edge
+    # 表示条件边的函数
     should_continue,
     {
-        # If `tools`, then we call the tool node.
+        # 如果返回 `continue`，则调用工具节点。
         "continue": "music_tool_node",
-        # Otherwise we finish.
+        # 否则流程结束。
         "end": END,
     },
 )

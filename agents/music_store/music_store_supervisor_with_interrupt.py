@@ -25,27 +25,27 @@ class State(InputState):
 from pydantic import BaseModel, Field
 
 class UserInput(BaseModel):
-    """Schema for parsing user-provided account information."""
-    identifier: str = Field(description = "Identifier, which can be a customer ID, email, or phone number.")
+    """用于解析用户提供的账户信息的 schema。"""
+    identifier: str = Field(description = "标识符，可以是客户 ID、邮箱或电话号码。")
 
 
 structured_llm = model.with_structured_output(schema=UserInput)
-structured_system_prompt = """You are a customer service representative responsible for extracting customer identifier.\n 
-Only extract the customer's account information from the message history. 
-If they haven't provided the information yet, return an empty string for the file"""
+structured_system_prompt = """你是一位客服代表，负责提取客户标识符。\n
+只从消息历史中提取客户账户信息。
+如果客户尚未提供该信息，请为该字段返回空字符串。"""
 
 from typing import Optional
 
-# Helper 
+# 辅助函数
 def get_customer_id_from_identifier(identifier: str) -> Optional[int]:
     """
-    Retrieve Customer ID using an identifier, which can be a customer ID, email, or phone number.
+    使用标识符查询客户 ID。标识符可以是客户 ID、邮箱或电话号码。
     
-    Args:
-        identifier (str): The identifier can be customer ID, email, or phone.
+    参数：
+        identifier (str): 可以是客户 ID、邮箱或电话号码。
     
-    Returns:
-        Optional[int]: The CustomerId if found, otherwise None.
+    返回：
+        Optional[int]: 如果找到则返回 CustomerId，否则返回 None。
     """
     if identifier.isdigit():
         return int(identifier)
@@ -63,35 +63,34 @@ def get_customer_id_from_identifier(identifier: str) -> Optional[int]:
             return formatted_result[0][0]
     return None 
 
-# Node
+# 节点
 
 def verify_info(state: State):
-    """Verify the customer's account by parsing their input and matching it with the database."""
+    """解析客户输入并与数据库匹配，以验证客户账户。"""
 
     if state.get("customer_id") is None: 
-        system_instructions = """You are a music store agent, where you are trying to verify the customer identity 
-        as the first step of the customer support process. 
-        Only after their account is verified, you would be able to support them on resolving the issue. 
-        In order to verify their identity, one of their customer ID, email, or phone number needs to be provided.
-        If the customer has not provided their identifier, please ask them for it.
-        If they have provided the identifier but cannot be found, please ask them to revise it."""
+        system_instructions = """你是音乐商店 Agent，当前正在将验证客户身份作为客服流程的第一步。
+        只有客户账户通过验证后，你才能协助他们解决问题。
+        为了验证身份，客户需要提供客户 ID、邮箱或电话号码之一。
+        如果客户尚未提供标识符，请向他们索要。
+        如果客户已提供标识符但无法找到，请让他们修改后重新提供。"""
 
         user_input = state["messages"][-1] 
     
-        # Parse for customer ID
+        # 解析客户 ID
         parsed_info = structured_llm.invoke([SystemMessage(content=structured_system_prompt)] + [user_input])
     
-        # Extract details
+        # 提取详情
         identifier = parsed_info.identifier
     
         customer_id = ""
-        # Attempt to find the customer ID
+        # 尝试查找客户 ID
         if (identifier):
             customer_id = get_customer_id_from_identifier(identifier)
     
         if customer_id != "":
             intent_message = AIMessage(
-                content= f"Thank you for providing your information! I was able to verify your account with customer id {customer_id}."
+                content= f"感谢你提供信息！我已经成功验证你的账户，客户 ID 为 {customer_id}。"
             )
             return {
                   "customer_id": customer_id,
@@ -105,14 +104,14 @@ def verify_info(state: State):
         pass
 
 from langgraph.types import interrupt
-# Node
+# 节点
 def human_input(state: State):
-    """ No-op node that should be interrupted on """
-    user_input = interrupt("Please provide input.")
+    """应在此处被 interrupt 的空操作节点。"""
+    user_input = interrupt("请提供输入。")
     return {"messages": [HumanMessage(content=user_input)]}
 
 
-# conditional_edge
+# 条件边
 def should_interrupt(state: State):
     if state.get("customer_id") is not None:
         return "continue"
@@ -121,7 +120,7 @@ def should_interrupt(state: State):
 
 
 
-# Add nodes 
+# 添加节点
 multi_agent_verify = StateGraph(State, input_schema = InputState)
 multi_agent_verify.add_node("verify_info", verify_info)
 multi_agent_verify.add_node("human_input", human_input)
