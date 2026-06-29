@@ -24,6 +24,8 @@ This is a condensed version of LangChain Academy, intended to be run in a sessio
 - **research_agent.ipynb**: Deep research agent with parallel sub-researchers
 - **deepagents.ipynb**: Build a research agent from scratch with DeepAgents -- covers AGENTS.md, skills, backends, long-term memory, HITL, and more
 
+`research_agent.ipynb`, `deepagents.ipynb`, and the `agents/researcher/` / `agents/deep_agent/` implementations require `TAVILY_API_KEY` for web search.
+
 ### Agents (`agents/`)
 Standalone agent implementations that run in LangGraph Studio via `langgraph dev`:
 - **`agents/101/`** - Simple weather agent from the 101 notebook
@@ -91,6 +93,8 @@ $ cd langgraph-101
 # Copy the .env.example file to .env
 cp .env.example .env
 ```
+Set the API keys you plan to use in `.env`. In particular, the research agents require `TAVILY_API_KEY` for web search.
+
 If you run into issues with setting up the python environment or acquiring the necessary API keys due to any restrictions (ex. corporate policy), contact your LangChain representative and we'll find a work-around!
 
 ### Package Installation

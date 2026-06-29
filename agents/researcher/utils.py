@@ -1,6 +1,5 @@
 """Deep Research Agent 的简化工具函数。"""
 
-import logging
 from datetime import datetime
 
 from langchain_core.messages import (
@@ -8,8 +7,19 @@ from langchain_core.messages import (
     filter_messages,
 )
 from langchain_core.tools import tool
+from tavily import TavilyClient
 
 from agents.researcher.models import ResearchComplete
+
+tavily_client = None
+
+def get_tavily_client() -> TavilyClient:
+    """按需初始化 Tavily 客户端，避免导入阶段强制读取密钥。"""
+    global tavily_client
+    if tavily_client is None:
+        tavily_client = TavilyClient()
+    return tavily_client
+
 
 ##########################
 # 反思工具相关函数
@@ -34,19 +44,32 @@ def think_tool(reflection: str) -> str:
 # 工具相关函数
 ##########################
 
+
+@tool
+def tavily_search(query: str) -> str:
+    """针对给定查询搜索网页信息。
+
+    参数：
+        query: 要执行的搜索查询
+    """
+    search_results = get_tavily_client().search(query, max_results=3, topic="general")
+
+    result_texts = []
+    for result in search_results.get("results", []):
+        url = result["url"]
+        title = result["title"]
+        content = result.get("content", "没有可用内容")
+        result_text = f"## {title}\n**URL:** {url}\n\n{content}\n\n---\n"
+        result_texts.append(result_text)
+
+    return f"为“{query}”找到 {len(result_texts)} 条结果：\n\n{''.join(result_texts)}"
+
 async def get_all_tools():
     """组装研究操作所需的完整工具集。
 
-    返回包含 OpenAI 原生网页搜索在内的工具。
+    返回研究流程所需的完整工具集。
     """
-    # 核心研究工具
-    tools = [tool(ResearchComplete), think_tool]
-
-    # 添加 OpenAI 原生网页搜索
-    # 这是 OpenAI 模型能够识别的特殊工具定义
-    tools.append({"type": "web_search_preview"})
-
-    return tools
+    return [tool(ResearchComplete), think_tool, tavily_search]
 
 
 def get_notes_from_tool_calls(messages: list[MessageLikeRepresentation]):
@@ -80,19 +103,8 @@ def anthropic_websearch_called(response):
 
 
 def openai_websearch_called(response):
-    """检测是否使用了 OpenAI 网页搜索。"""
-    try:
-        tool_outputs = response.additional_kwargs.get("tool_outputs")
-        if not tool_outputs:
-            return False
-
-        for tool_output in tool_outputs:
-            if tool_output.get("type") == "web_search_call":
-                return True
-
-        return False
-    except (AttributeError, TypeError):
-        return False
+    """当前研究流程不使用 OpenAI 原生网页搜索。"""
+    return False
 
 
 async def execute_tool_safely(tool, args):

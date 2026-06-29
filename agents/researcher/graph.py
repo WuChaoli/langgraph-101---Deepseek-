@@ -44,7 +44,6 @@ from agents.researcher.utils import (
     get_all_tools,
     get_notes_from_tool_calls,
     get_today_str,
-    openai_websearch_called,
     think_tool,
 )
 
@@ -351,12 +350,7 @@ async def researcher_tools(state: ResearcherState, config: RunnableConfig) -> Co
     most_recent_message = researcher_messages[-1]
 
     # 如果没有工具调用，则提前退出
-    has_tool_calls = bool(most_recent_message.tool_calls)
-    has_native_search = (
-        openai_websearch_called(most_recent_message)
-    )
-
-    if not has_tool_calls and not has_native_search:
+    if not most_recent_message.tool_calls:
         return Command(goto="compress_research")
 
     # 执行所有工具调用

@@ -24,6 +24,8 @@
 - **research_agent.ipynb**：带有并行子研究员的深度研究 Agent
 - **deepagents.ipynb**：使用 DeepAgents 从头构建研究 Agent——涵盖 AGENTS.md、技能、后端、长期记忆、HITL 等
 
+`research_agent.ipynb`、`deepagents.ipynb` 以及 `agents/researcher/`、`agents/deep_agent/` 的实现都需要在 `.env` 中配置 `TAVILY_API_KEY` 才能进行网页搜索。
+
 ### Agents（`agents/`）
 通过 `langgraph dev` 在 LangGraph Studio 中运行的独立 Agent 实现：
 - **`agents/101/`** - 来自 101 笔记本的简单天气 Agent
@@ -91,6 +93,8 @@ $ cd langgraph-101
 # 将 .env.example 文件复制为 .env
 cp .env.example .env
 ```
+请在 `.env` 中填入你要使用的 API 密钥。特别是研究类 Agent 需要 `TAVILY_API_KEY` 才能执行网页搜索。
+
 如果您在设置 Python 环境或获取必要的 API 密钥时遇到问题（例如公司政策限制），请联系您的 LangChain 代表，我们会找到解决方案！
 
 ### 安装包
