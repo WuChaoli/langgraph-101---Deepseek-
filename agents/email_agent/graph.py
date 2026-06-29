@@ -23,7 +23,7 @@ class RouterSchema(BaseModel):
         "'respond' 表示需要回复的邮件",
     )
 
-llm_router = model.with_structured_output(RouterSchema) 
+llm_router = model.with_structured_output(RouterSchema, method="json_mode")
 
 # 工具
 @tool
@@ -56,7 +56,7 @@ class Done(BaseModel):
 tools = [schedule_meeting, check_calendar_availability, write_email, Done]
 tools_by_name = {tool.name: tool for tool in tools}
 
-llm_with_tools = model.bind_tools(tools, tool_choice="any", parallel_tool_calls=False)
+llm_with_tools = model.bind_tools(tools, parallel_tool_calls=False)
 
 
 # 状态定义
@@ -169,6 +169,7 @@ def should_continue(state: State) -> Literal["Action", "__end__"]:
                 return END
             else:
                 return "Action"
+    return END
 
 # 构建工作流
 agent_builder = StateGraph(State)
@@ -258,6 +259,7 @@ triage_instructions = """
 2. NOTIFY - 值得通知的重要信息，但不需要回复
 3. RESPOND - 需要直接回复的邮件
 请把下面的邮件分类到其中一类。
+请只返回 JSON，格式为 {{"reasoning": "分类理由", "classification": "ignore|respond|notify"}}。
 </ Instructions >
 
 < Rules >
