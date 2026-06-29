@@ -1,0 +1,4 @@
+interface:
+  display_name: "LangChain DeepSeek"
+  short_description: "Handle LangChain and LangGraph DeepSeek compatibility issues."
+  default_prompt: "Use this skill when changing LangChain or LangGraph code that runs on DeepSeek models."
